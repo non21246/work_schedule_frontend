@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:work_schedule/dashboard.dart';
+import 'package:work_schedule/http.dart';
 
 class WorkPage extends StatefulWidget {
   @override
@@ -7,18 +10,21 @@ class WorkPage extends StatefulWidget {
 }
 
 class _WorkPageState extends State<WorkPage> {
+  TextEditingController nameController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
   DateTime? startDate;
   DateTime? endDate;
   TimeOfDay? startTime;
   TimeOfDay? endTime;
+  var year = 2010;
   var Null = null;
 
   Future<void> _selectStartDate(BuildContext context) async {
     final DateTime picked = (await showDatePicker(
       context: context,
       initialDate: startDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(year + 30),
     ))!;
     if (picked != Null && picked != startDate) {
       setState(() {
@@ -31,10 +37,11 @@ class _WorkPageState extends State<WorkPage> {
     final DateTime picked = (await showDatePicker(
       context: context,
       initialDate: endDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      firstDate: DateTime(year),
+      lastDate: DateTime(year + 30),
     ))!;
-    if (picked != Null && picked != endDate) {
+
+    if (picked != Null && picked != endDate && startDate != Null) {
       setState(() {
         endDate = picked;
       });
@@ -46,7 +53,7 @@ class _WorkPageState extends State<WorkPage> {
       context: context,
       initialTime: startTime ?? TimeOfDay.now(),
     ))!;
-    if (picked != Null) {
+    if (picked != Null && startDate != Null) {
       setState(() {
         startTime = picked;
       });
@@ -58,10 +65,42 @@ class _WorkPageState extends State<WorkPage> {
       context: context,
       initialTime: endTime ?? TimeOfDay.now(),
     ))!;
-    if (picked != Null) {
+    if (picked != Null && endDate != Null) {
       setState(() {
         endTime = picked;
       });
+    }
+  }
+
+  Future<void> _addWork() async {
+    if (nameController.text.isNotEmpty &&
+        descriptionController.text.isNotEmpty) {
+      var workData = {
+        'name': nameController.text,
+        'description': descriptionController.text,
+        'startDate': startDate.toString(),
+        'endDate': endDate.toString(),
+        'startTime': startTime.toString(),
+        'endTime': endTime.toString(),
+      };
+      try {
+        var response = await http.post(Uri.parse(createWork),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(workData));
+
+        var jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status']) {
+          Navigator.of(context).pop(
+            MaterialPageRoute(
+              builder: (context) => DashboardPage(),
+            ),
+          );
+        } else {
+          throw ("Create failed");
+        }
+      } catch (error) {
+        throw error;
+      }
     }
   }
 
@@ -71,58 +110,50 @@ class _WorkPageState extends State<WorkPage> {
       appBar: AppBar(
         title: Text('จัดตารางงานของคุณ'),
         backgroundColor: Color(0xFFFFCA79),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.save), // ไอคอนบันทึก
-            onPressed: () {
-              // กระบวนการเมื่อปุ่มบันทึกถูกกด
-            },
-          ),
-        ],
       ),
       backgroundColor: Color(0xFFFFECCF),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'ชื่องานของคุณ',
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.green),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
+            SizedBox(
+              height: 20,
+            ),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                hintText: 'ชื่องานของคุณ',
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.black),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 20,
+            ),
+            TextField(
+              controller: descriptionController,
+              decoration: InputDecoration(
+                hintText: 'คำอธิบายงาน',
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.black),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
                 ),
               ),
             ),
             SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'คำอธิบายงานของคุณ',
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.green),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            IconButton(
-              icon: Icon(Icons.access_time),
-              onPressed: () {},
-              color: Colors.green,
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 ElevatedButton(
                   onPressed: () async {
@@ -131,21 +162,20 @@ class _WorkPageState extends State<WorkPage> {
                   },
                   child: Row(
                     children: [
+                      SizedBox(width: 15),
                       Icon(Icons.calendar_today),
-                      SizedBox(width: 8),
+                      SizedBox(width: 15),
                       Text(
                         'วันเริ่มต้น: ${startDate?.toString().split(' ')[0] ?? 'เลือก'} ${startTime?.format(context) ?? '00:00'}',
                       ),
                     ],
                   ),
-                  style: ElevatedButton.styleFrom(),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    fixedSize: Size(300, 30), // ตั้งความกว้างและความสูงคงที่
+                  ),
                 ),
-              ],
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
+                SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () async {
                     await _selectEndDate(context);
@@ -153,22 +183,27 @@ class _WorkPageState extends State<WorkPage> {
                   },
                   child: Row(
                     children: [
+                      SizedBox(width: 15),
                       Icon(Icons.calendar_today),
-                      SizedBox(width: 8),
+                      SizedBox(width: 15),
                       Text(
                         'วันครบกำหนด: ${endDate?.toString().split(' ')[0] ?? 'เลือก'} ${endTime?.format(context) ?? '00:00'}',
                       ),
                     ],
                   ),
-                  style: ElevatedButton.styleFrom(),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    fixedSize: Size(300, 30), // ตั้งความกว้างและความสูงคงที่
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 50),
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
                 onPressed: () {
+                  _addWork();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) =>

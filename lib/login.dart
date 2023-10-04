@@ -3,7 +3,7 @@ import 'package:work_schedule/register.dart';
 import 'package:flutter/material.dart';
 import 'package:velocity_x/velocity_x.dart';
 import 'package:http/http.dart' as http;
-import 'package:work_schedule/work.dart';
+import 'package:work_schedule/dashboard.dart';
 import 'package:work_schedule/http.dart';
 
 class LoginPage extends StatefulWidget {
@@ -16,7 +16,9 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-  bool _isNotValidate = false;
+  bool _emailIsNotValidate = false;
+  bool _passwordIsNotValidate = false;
+  bool _isPasswordVisible = false;
 
   Future<void> loginUser() async {
     if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
@@ -24,50 +26,56 @@ class _LoginPageState extends State<LoginPage> {
         "email": emailController.text,
         "password": passwordController.text
       };
-
-      var response = await http.post(Uri.parse(login),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode(loginBody));
-      var jsonResponse = jsonDecode(response.body);
-      if (jsonResponse['status']) {
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => WorkPage()));
+      try {
+        var response = await http.post(Uri.parse(login),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(loginBody));
+        var jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status']) {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => DashboardPage()));
+        } else {
+          throw ("Login failed");
+        }
+      } catch (error) {
+        throw error;
       }
-      ;
-    } else {
+    } else if (emailController.text.isEmpty) {
       setState(() {
-        _isNotValidate = true;
+        _emailIsNotValidate = true;
+      });
+    } else if (passwordController.text.isEmpty) {
+      setState(() {
+        _passwordIsNotValidate = true;
       });
     }
+  }
+
+  void passwordVisibility() {
+    setState(() {
+      _isPasswordVisible = !_isPasswordVisible;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        backgroundColor: Color.fromRGBO(243, 223, 192, 1),
         body: Container(
-          padding: EdgeInsets.only(left: 5, right: 5),
+          padding: const EdgeInsets.only(left: 20, right: 20),
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-                colors: [
-                  Color.fromARGB(0, 43, 1, 255),
-                  Color.fromARGB(255, 0, 234, 255)
-                ],
-                begin: FractionalOffset.topLeft,
-                end: FractionalOffset.bottomRight),
-          ),
           child: Center(
             child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Login',
+                    'Sign In',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: 50),
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.text,
@@ -75,7 +83,7 @@ class _LoginPageState extends State<LoginPage> {
                       filled: true,
                       fillColor: Color.fromARGB(150, 255, 255, 255),
                       hintText: "Email",
-                      errorText: _isNotValidate ? "Enter proper info" : null,
+                      errorText: _emailIsNotValidate ? "Email is Empty" : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(
                           Radius.circular(4.4),
@@ -87,16 +95,25 @@ class _LoginPageState extends State<LoginPage> {
                   TextField(
                     controller: passwordController,
                     keyboardType: TextInputType.visiblePassword,
-                    obscureText: true,
+                    obscureText: !_isPasswordVisible,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Color.fromARGB(150, 255, 255, 255),
                       hintText: "Password",
-                      errorText: _isNotValidate ? "Enter proper info" : null,
+                      errorText:
+                          _passwordIsNotValidate ? "Password is Empty" : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(
                           Radius.circular(4.4),
                         ),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: passwordVisibility,
                       ),
                     ),
                   ),

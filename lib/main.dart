@@ -1,4 +1,5 @@
-import 'package:work_schedule/login.dart';
+//import 'package:work_schedule/login.dart';
+import 'package:work_schedule/empty.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -9,10 +10,15 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  build(BuildContext context) {
     return MaterialApp(
-      title: 'Demo App',
-      home: LoginPage(),
+      title: 'NBU Schedule',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const emptyPage(),
+      //home: const LoginPage(),
     );
   }
 }
